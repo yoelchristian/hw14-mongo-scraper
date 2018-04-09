@@ -12,7 +12,7 @@ var PORT = 8080;
 var MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost/homework-14";
 mongoose.Promise = Promise;
 mongoose.connect(MONGODB_URI, {
-   
+    useMongoClient: true
 });
 
 app.use(bodyParser.urlencoded({ extended: true }));
