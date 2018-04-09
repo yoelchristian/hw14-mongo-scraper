@@ -21,6 +21,12 @@ app.use(express.static("public"));
 app.engine("handlebars", exphbs({ defaultLayout: "main" }));
 app.set("view engine", "handlebars");
 
+app.get("/", function(req, res) {
+    db.Article.find({}).populate("comments").then(function(dbArticle) {
+        res.render("index", {title: "NHL Scraper", articles: dbArticle})
+    })
+})
+
 app.get("/scrape", function(req, res) {
     request("https://www.nhl.com/", function(error, response, html) {
         var $ = cheerio.load(html);
@@ -30,7 +36,7 @@ app.get("/scrape", function(req, res) {
 
             result.title = $(element).children().first().text();
             result.subtitle = $(element).children().eq(1).text();
-            result.link = $(element).attr("href");
+            result.link = "https://www.nhl.com/" + $(element).attr("href");
             db.Article.find({"title": result.title}).then(function(findResult) {
                 if(!findResult.length) {
                     db.Article.create(result).then(function(dbArticle) {
@@ -40,7 +46,7 @@ app.get("/scrape", function(req, res) {
             })     
         })
     });
-    res.send("Scrape Complete");
+    res.redirect("/");
 });
 
 app.get("/articles", function(req, res) {
@@ -49,14 +55,19 @@ app.get("/articles", function(req, res) {
     });
 })
 
-app.get("articles/:id", function(req, res) {
-    db.Article.findOne({_id: req.params.id}).populate("comment").then(function(dbArticle) {
-        res.json(dbArticle);
+app.get("/articles/:id", function(req, res) {
+    db.Article.findOne({_id: req.params.id}).populate("comments").then(function(dbArticle) {
+        console.log(dbArticle)
+        res.render("single", {articles: dbArticle});
     })
 })
 
 app.post("/articles/:id", function(req, res) {
-    db.Comment.create(req.body);
+    db.Comment.create({body: req.body.comment}).then(function(dbComment) {
+        return db.Article.findOneAndUpdate({_id: req.params.id}, {$push: {comments: dbComment._id}}, {new: true})
+    }).then(function(dbArticle) {
+        res.redirect("/");
+    });
 })
 
 app.listen(PORT, function() {
