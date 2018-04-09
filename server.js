@@ -7,7 +7,7 @@ var cheerio = require('cheerio');
 var app = express();
 
 var db = require("./models");
-var PORT = 8080;
+var PORT = process.env.PORT || 8080;
 
 var MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost/homework-14";
 mongoose.Promise = Promise;
