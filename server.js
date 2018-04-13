@@ -31,22 +31,40 @@ app.get("/scrape", function(req, res) {
     request("https://www.nhl.com/", function(error, response, html) {
         var $ = cheerio.load(html);
 
+        var promises = [];
+
         $("div.mixed-feed__item-header-text > a").each(function(i, element) {
             var result = {};
 
             result.title = $(element).children().first().text();
             result.subtitle = $(element).children().eq(1).text();
             result.link = "https://www.nhl.com/" + $(element).attr("href");
-            db.Article.find({"title": result.title}).then(function(findResult) {
+
+           var promise = db.Article.find({"title": result.title}).then(function(findResult) {
                 if(!findResult.length) {
-                    db.Article.create(result).then(function(dbArticle) {
+                    return db.Article.create(result).then(function(dbArticle) {
+                        return dbArticle
                         console.log(dbArticle);
                     })
                 }
-            })     
+
+                return findResult
+            })
+            
+            promises.push(promise)
         })
+
+        Promise.all(promises)
+            .then(function(results) {
+                res.redirect("/")
+            })
+            .catch(function(err) {
+                res.status(400).send({
+                    message: err.message
+                })
+            })
     });
-    res.redirect("/");
+
 });
 
 app.get("/articles", function(req, res) {
